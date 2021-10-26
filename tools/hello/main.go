@@ -9,10 +9,15 @@ func main() {
 	var lock sync.Mutex
 
 	go func(){
-		fmt.Println("hello goroutine!")
 		lock.Lock()
+		fmt.Println("hello goroutine!")
+
+		lock.Unlock()
 	}()
 
-	lock.Unlock()
+	select {
+
+	}
+
 
 }
