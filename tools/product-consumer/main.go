@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"syscall"
 )
 
 func producer(factor int, ch chan<- int) {
@@ -32,6 +33,6 @@ func main() {
 
 	fmt.Println("done")
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	fmt.Println(fmt.Sprintf("quit :(%v)", <-sig))
 }
