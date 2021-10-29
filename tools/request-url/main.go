@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"sync"
 	"time"
 )
 
@@ -49,7 +50,9 @@ func requestApi(url string){
 	err = json.Unmarshal(body, &resultData)
 
 }
-func requestMain(url string) {
+func requestMain(url string,wg *sync.WaitGroup,cancel chan bool,limit chan bool) {
+	defer wg.Done()
+
 	client := &http.Client{}
 	method := "GET"
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(nil))
@@ -84,26 +87,34 @@ func requestMain(url string) {
 	for _, href := range hrefRegList {
 		hrefList = append(hrefList, baseUrl+href[1])
 	}
+	<- limit
+	for  {
+		select {
+			case <- cancel:
+				fmt.Println(url+":done")
+				return
+
+		}
+	}
 
 }
 
 func main() {
-	//var wg sync.WaitGroup
-	t1 := time.Now().Second()
+	var wg sync.WaitGroup
+	var cancel = make(chan bool)
+	var limit = make(chan bool,30)
+	t1 := time.Now()
 	requestApi(startApiUrl)
-	for _,rd := range resultData[:10]{
+	for _,rd := range resultData{
+		wg.Add(1)
+		limit <- true
 		url := fmt.Sprintf("%s/%s/%s",baseUrl,rd.Slugname,rd.Lang)
 		fmt.Println("start parse title:",rd.Title)
-		requestMain(url)
+		go requestMain(url,&wg,cancel,limit)
 	}
 
-	fmt.Println("cost time:",time.Now().Second()-t1)
+	close(cancel)
+	wg.Wait()
+	fmt.Println("cost time:",time.Since(t1))
 
-	//for i := 0; i < len(resultData); i++ {
-	//	url := hrefList[i]
-	//	fmt.Println("request url：", url)
-	//	requestMain(url)
-	//}
-	//fmt.Println("hrefList:", hrefList)
-	//wg.Done()
 }
